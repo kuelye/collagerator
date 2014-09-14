@@ -1,3 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Collagerator</string>
+    <string name="application_name">Collagerator</string>
+
+    <string name="user_selection_activity_title">Collagerator</string>
+    <string name="make_collage_button_text">Make a collage</string>
 </resources>
