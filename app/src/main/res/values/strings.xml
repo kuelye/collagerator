@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- common -->
     <string name="application_name">Collagerator</string>
-
+    <!-- user_selection_activity -->
     <string name="user_selection_activity_title">Collagerator</string>
-    <string name="make_collage_button_text">Make a collage</string>
+    <string name="user_select_button_text">Make a collage</string>
+    <!-- photo_selection_activity -->
+    <string name="photo_selection_activity_title">Select</string>
+    <string name="photo_select_button_text">Make a collage</string>
+    <!-- result_collage_activity -->
+    <string name="send_collage_activity_title">Send</string>
+    <string name="send_collage_button_text">Send a collage</string>
 </resources>

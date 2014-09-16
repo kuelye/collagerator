@@ -19,5 +19,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".gui.PhotoSelectionActivity"
+            android:label="@string/photo_selection_activity_title" >
+        </activity>
+
+        <activity
+            android:name=".gui.SendCollageActivity"
+            android:label="@string/send_collage_activity_title" >
+        </activity>
     </application>
 </manifest>

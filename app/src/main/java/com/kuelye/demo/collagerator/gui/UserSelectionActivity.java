@@ -1,6 +1,8 @@
 package com.kuelye.demo.collagerator.gui;
 
 import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -21,9 +23,9 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.List;
 
 import static com.kuelye.components.utils.IOUtils.readFullyAndClose;
+import static com.kuelye.demo.collagerator.gui.PhotoSelectionActivity.EXTRA_PHOTOS;
 
 public class UserSelectionActivity extends Activity implements View.OnClickListener {
 
@@ -42,13 +44,13 @@ public class UserSelectionActivity extends Activity implements View.OnClickListe
     private static final String RESPONSE_MEDIA_TYPE_FIELD_NAME                  = "type";
     private static final String RESPONSE_MEDIA_TYPE_IMAGE                       = "image";
     private static final String RESPONSE_MEDIA_IMAGES_FIELD_NAME                = "images";
-    private static final String RESPONSE_MEDIA_IMAGES_STANDARD_FIELD_NAME
+    private static final String RESPONSE_MEDIA_IMAGES_THUMBNAIL_FIELD_NAME      = "thumbnail";
+    private static final String RESPONSE_MEDIA_IMAGES_STANDARD_RESOLUTION_FIELD_NAME
             = "standard_resolution";
-    private static final String RESPONSE_MEDIA_IMAGES_STANDARD_URL_FIELD_NAME   = "url";
+    private static final String RESPONSE_MEDIA_IMAGES_URL_FIELD_NAME = "url";
     private static final String RESPONSE_MEDIA_LIKES_FIELD_NAME                 = "likes";
     private static final String RESPONSE_MEDIA_LIKES_COUNT_FIELD_NAME           = "count";
 
-    private Button mMakeCollageButton;
     private EditText mUserIdEditText;
 
     @Override
@@ -56,16 +58,16 @@ public class UserSelectionActivity extends Activity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.user_selection_activity);
 
-        mMakeCollageButton = (Button) findViewById(R.id.make_collage_button);
-        mMakeCollageButton.setOnClickListener(this);
+        Button userSelectButton = (Button) findViewById(R.id.user_select_button);
+        userSelectButton.setOnClickListener(this);
         mUserIdEditText = (EditText) findViewById(R.id.user_id_edit_text);
     }
 
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
-            case R.id.make_collage_button: {
-                new GetPhotosTask().execute(mUserIdEditText.getText().toString());
+            case R.id.user_select_button: {
+                new GetPhotosTask(this).execute(mUserIdEditText.getText().toString());
             }
         }
     }
@@ -81,10 +83,16 @@ public class UserSelectionActivity extends Activity implements View.OnClickListe
         }
     }
 
-    private class GetPhotosTask extends AsyncTask<String, Void, List<InstagramMedia>> {
+    private class GetPhotosTask extends AsyncTask<String, Void, ArrayList<InstagramMedia>> {
+
+        private final Context mContext;
+
+        public GetPhotosTask(Context context) {
+            mContext = context;
+        }
 
         @Override
-        protected List<InstagramMedia> doInBackground(String... params) {
+        protected ArrayList<InstagramMedia> doInBackground(String... params) {
             final String userName = params[0];
 
             try {
@@ -113,8 +121,12 @@ public class UserSelectionActivity extends Activity implements View.OnClickListe
         }
 
         @Override
-        protected void onPostExecute(List<InstagramMedia> photosLinks) {
-
+        protected void onPostExecute(ArrayList<InstagramMedia> photos) {
+            Intent intent = new Intent(mContext, PhotoSelectionActivity.class);
+            Bundle extras = new Bundle();
+            extras.putParcelableArrayList(EXTRA_PHOTOS, photos);
+            intent.putExtras(extras);
+            startActivity(intent);
         }
 
         // ------------------- PRIVATE -------------------
@@ -127,26 +139,27 @@ public class UserSelectionActivity extends Activity implements View.OnClickListe
             return new JSONObject(response);
         }
 
-        private List<InstagramMedia> parseMediaData(JSONArray data) throws JSONException {
-            final List<InstagramMedia> result = new ArrayList<InstagramMedia>();
+        private ArrayList<InstagramMedia> parseMediaData(JSONArray data) throws JSONException {
+            final ArrayList<InstagramMedia> result = new ArrayList<InstagramMedia>();
 
             for (int i = 0, l = data.length(); i < l; ++i) {
                 JSONObject media = (JSONObject) data.get(i);
                 if (media.getString(RESPONSE_MEDIA_TYPE_FIELD_NAME)
                         .equals(RESPONSE_MEDIA_TYPE_IMAGE)) {
-                    String image = media.getJSONObject(RESPONSE_MEDIA_IMAGES_FIELD_NAME)
-                            .getJSONObject(RESPONSE_MEDIA_IMAGES_STANDARD_FIELD_NAME)
-                            .getString(RESPONSE_MEDIA_IMAGES_STANDARD_URL_FIELD_NAME);
-                    int likes = media.getJSONObject(RESPONSE_MEDIA_LIKES_FIELD_NAME)
+                    JSONObject images = media.getJSONObject(RESPONSE_MEDIA_IMAGES_FIELD_NAME);
+                    String thumbnailImageUrl = images
+                            .getJSONObject(RESPONSE_MEDIA_IMAGES_THUMBNAIL_FIELD_NAME)
+                            .getString(RESPONSE_MEDIA_IMAGES_URL_FIELD_NAME);
+                    String standardResolutionImageUrl = images
+                            .getJSONObject(RESPONSE_MEDIA_IMAGES_STANDARD_RESOLUTION_FIELD_NAME)
+                            .getString(RESPONSE_MEDIA_IMAGES_URL_FIELD_NAME);
+                    int likesCount = media.getJSONObject(RESPONSE_MEDIA_LIKES_FIELD_NAME)
                             .getInt(RESPONSE_MEDIA_LIKES_COUNT_FIELD_NAME);
-                    result.add(new InstagramMedia(image, likes));
-                } else {
-                    Log.d("GUB", "VIDEO CATCHED");
+                    result.add(new InstagramMedia(thumbnailImageUrl, standardResolutionImageUrl, likesCount));
                 }
             }
 
             Collections.sort(result, new LikesCountDescendingComparator());
-            Log.d("GUB", result.toString());
 
             return result;
         }

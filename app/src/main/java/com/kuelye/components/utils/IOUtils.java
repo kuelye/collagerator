@@ -4,7 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class IOUtils {
+public final class IOUtils {
 
     private static final int BUFFER_SIZE = 1024;
 

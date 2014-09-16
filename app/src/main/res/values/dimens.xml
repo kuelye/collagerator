@@ -1,4 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- common -->
     <dimen name="activity_horizontal_margin_standard">16dp</dimen>
     <dimen name="activity_vertical_margin_standard">16dp</dimen>
+    <!-- photo_selection_activity -->
+    <dimen name="photo_selection_thumbnail_size">150px</dimen>
+    <dimen name="photo_selection_thumbnail_spacing">5dp</dimen>
+    <dimen name="photo_selection_gallery_spacing">10dp</dimen>
 </resources>

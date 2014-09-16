@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- photo_selection_activity -->
+    <color name="photo_layout_selected">#40ffffff</color>
+    <color name="photo_layout_unselected">#00000000</color>
+</resources>

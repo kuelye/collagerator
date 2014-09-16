@@ -1,0 +1,27 @@
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.kuelye.demo.collagerator.gui.PhotoSelectionActivity" >
+
+    <LinearLayout
+        android:id="@id/photo_layout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/photo_selection_thumbnail_spacing" >
+
+        <ImageView
+            android:id="@id/photo_image_view"
+            android:layout_width="@dimen/photo_selection_thumbnail_size"
+            android:layout_height="@dimen/photo_selection_thumbnail_size"
+            android:layout_marginBottom="@dimen/photo_selection_thumbnail_spacing" />
+
+        <TextView
+            android:id="@id/likes_count_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal" />
+    </LinearLayout>
+</LinearLayout>
