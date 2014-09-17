@@ -9,6 +9,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import com.kuelye.demo.collagerator.R;
 import com.kuelye.demo.collagerator.instagram.InstagramMedia;
@@ -23,6 +24,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 
 import static com.kuelye.components.utils.IOUtils.readFullyAndCloseSilently;
 import static com.kuelye.demo.collagerator.gui.PhotoSelectionActivity.EXTRA_PHOTOS;
@@ -31,36 +33,46 @@ public class UserSelectionActivity extends Activity implements View.OnClickListe
 
     private static final String TAG = "com.demo.collagerator.gui.UserSelectionActivity";
 
-    private static final String USER_SEARCH_REQUEST
+    private static final String REQUEST_USER_SEARCH
             = "https://api.instagram.com/v1/users/search?q=%s&count=1&client_id=%s";
-    private static final String USER_MEDIA_RECENT_REQUEST
-            = "https://api.instagram.com/v1/users/%d/media/recent/?client_id=%s";
+    private static final String REQUEST_USER_MEDIA_RECENT
+            = "https://api.instagram.com/v1/users/%d/media/recent/?count=%d&max_id=%s&client_id=%s";
     private static final String CLIENT_ID
             = "427b4d3cf46d4ca69af14ab604dd2d05";
+    private static final int    MEDIA_COUNT_PER_REQUEST
+            = 10;
 
     private static final String RESPONSE_ENCODING                               = "UTF-8";
+    private static final String RESPONSE_PAGINATION_FIELD_NAME                  = "pagination";
+    private static final String RESPONSE_PAGINATION_NEXT_MAX_ID_FIELD_NAME      = "next_max_id";
     private static final String RESPONSE_DATA_FIELD_NAME                        = "data";
     private static final String RESPONSE_USER_ID_FIELD_NAME                     = "id";
+    private static final String RESPONSE_USER_NAME_FIELD_NAME                   = "username";
     private static final String RESPONSE_MEDIA_TYPE_FIELD_NAME                  = "type";
     private static final String RESPONSE_MEDIA_TYPE_IMAGE                       = "image";
     private static final String RESPONSE_MEDIA_IMAGES_FIELD_NAME                = "images";
     private static final String RESPONSE_MEDIA_IMAGES_THUMBNAIL_FIELD_NAME      = "thumbnail";
     private static final String RESPONSE_MEDIA_IMAGES_STANDARD_RESOLUTION_FIELD_NAME
             = "standard_resolution";
-    private static final String RESPONSE_MEDIA_IMAGES_URL_FIELD_NAME = "url";
+    private static final String RESPONSE_MEDIA_IMAGES_URL_FIELD_NAME            = "url";
     private static final String RESPONSE_MEDIA_LIKES_FIELD_NAME                 = "likes";
     private static final String RESPONSE_MEDIA_LIKES_COUNT_FIELD_NAME           = "count";
 
-    private EditText mUserIdEditText;
+    private static final int    ERROR_CAN_NOT_FIND_USER_CODE                    = 1;
+    private static final int    ERROR_EXCEPTION_CODE                            = 2;
+    private static final int    ERROR_NO_PHOTOS_CODE                            = 3;
+
+    private EditText    mUserIdEditText;
+    private Button      mUserSelectButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.user_selection_activity);
 
-        Button userSelectButton = (Button) findViewById(R.id.user_select_button);
-        userSelectButton.setOnClickListener(this);
-        mUserIdEditText = (EditText) findViewById(R.id.user_id_edit_text);
+        mUserSelectButton = (Button) findViewById(R.id.user_select_button);
+        mUserSelectButton.setOnClickListener(this);
+        mUserIdEditText = (EditText) findViewById(R.id.user_name_edit_text);
     }
 
     @Override
@@ -68,22 +80,21 @@ public class UserSelectionActivity extends Activity implements View.OnClickListe
         switch (view.getId()) {
             case R.id.user_select_button: {
                 new GetPhotosTask(this).execute(mUserIdEditText.getText().toString());
+                break;
             }
         }
     }
 
-    // -------------------- INNER --------------------
+    @Override
+    public void onStart() {
+        super.onStart();
 
-    private class LikesCountDescendingComparator implements Comparator<InstagramMedia> {
-
-        @Override
-        public int compare(InstagramMedia oA, InstagramMedia oB) {
-            return oA.getLikesCount() < oB.getLikesCount() ? 1 :
-                    oA.getLikesCount() == oB.getLikesCount() ? 0 : -1;
-        }
+        mUserSelectButton.setEnabled(true);
     }
 
-    private class GetPhotosTask extends AsyncTask<String, Void, ArrayList<InstagramMedia>> {
+    // -------------------- INNER --------------------
+
+    private class GetPhotosTask extends AsyncTask<String, Integer, List<InstagramMedia>> {
 
         private final Context mContext;
 
@@ -92,28 +103,64 @@ public class UserSelectionActivity extends Activity implements View.OnClickListe
         }
 
         @Override
-        protected ArrayList<InstagramMedia> doInBackground(String... params) {
+        protected void onPreExecute() {
+            mUserSelectButton.setEnabled(false);
+        }
+
+        @Override
+        protected List<InstagramMedia> doInBackground(String... params) {
             final String userName = params[0];
 
             try {
-                String request = String.format(USER_SEARCH_REQUEST, userName, CLIENT_ID);
+                String request = String.format(REQUEST_USER_SEARCH, userName, CLIENT_ID);
                 JSONObject response = getResponse(request);
                 JSONArray data = response.getJSONArray(RESPONSE_DATA_FIELD_NAME);
+                int userId = -1;
 
-                if (data.length() == 0) {
-                    // TODO [F] no user with the specific user name case
-                } else {
-                    int userId = ((JSONObject) data.get(0)).getInt(RESPONSE_USER_ID_FIELD_NAME);
+                if (data.length() != 0) {
+                    final JSONObject firstUserData = (JSONObject) data.get(0);
+                    final String firstUserName = firstUserData.getString(RESPONSE_USER_NAME_FIELD_NAME);
+                    if (userName.equals(firstUserName)) {
+                        userId = firstUserData.getInt(RESPONSE_USER_ID_FIELD_NAME);
+                    }
+                }
 
-                    request = String.format(USER_MEDIA_RECENT_REQUEST, userId, CLIENT_ID);
+                if (userId == -1) {
+                    publishProgress(ERROR_CAN_NOT_FIND_USER_CODE);
+                    return null;
+                }
+
+                String nextMaxId = "";
+                final List<InstagramMedia> photos = new ArrayList<InstagramMedia>();
+                do {
+                    request = String.format(REQUEST_USER_MEDIA_RECENT, userId
+                            , MEDIA_COUNT_PER_REQUEST, nextMaxId, CLIENT_ID);
                     response = getResponse(request);
                     data = response.getJSONArray(RESPONSE_DATA_FIELD_NAME);
+                    parseMediaData(photos, data);
 
-                    return parseMediaData(data);
+                    JSONObject pagination = response.getJSONObject(RESPONSE_PAGINATION_FIELD_NAME);
+                    if (pagination != null) {
+                        nextMaxId = pagination.getString(RESPONSE_PAGINATION_NEXT_MAX_ID_FIELD_NAME);
+                    } else {
+                        nextMaxId = "";
+                    }
+                    Log.d("GUB", nextMaxId);
+                } while (data.length() != 0);
+
+                if (photos.size() == 0) {
+                    publishProgress(ERROR_NO_PHOTOS_CODE);
+                    return null;
                 }
+
+                Collections.sort(photos, new LikesCountDescendingComparator());
+
+                return photos;
             } catch (IOException e) {
+                publishProgress(ERROR_EXCEPTION_CODE);
                 Log.e(TAG, "", e);
             } catch (JSONException e) {
+                publishProgress(ERROR_EXCEPTION_CODE);
                 Log.e(TAG, "", e);
             }
 
@@ -121,12 +168,42 @@ public class UserSelectionActivity extends Activity implements View.OnClickListe
         }
 
         @Override
-        protected void onPostExecute(ArrayList<InstagramMedia> photos) {
-            Intent intent = new Intent(mContext, PhotoSelectionActivity.class);
-            Bundle extras = new Bundle();
-            extras.putParcelableArrayList(EXTRA_PHOTOS, photos);
-            intent.putExtras(extras);
-            startActivity(intent);
+        protected void onProgressUpdate(Integer... progress) {
+            final int code = progress[0];
+
+            int toastMessageResId = -1;
+            switch (code) {
+                case ERROR_CAN_NOT_FIND_USER_CODE: {
+                    toastMessageResId = R.string.toast_error_can_not_find_user_text;
+                    break;
+                }
+                case ERROR_EXCEPTION_CODE: {
+                    toastMessageResId = R.string.toast_error_exception_text;
+                    break;
+                }
+                case ERROR_NO_PHOTOS_CODE: {
+                    toastMessageResId = R.string.toast_error_no_photos_text;
+                    break;
+                }
+            }
+
+            if (toastMessageResId != -1) {
+                Toast.makeText(mContext, toastMessageResId, Toast.LENGTH_SHORT).show();
+                mUserSelectButton.setEnabled(true);
+            }
+        }
+
+        @Override
+        protected void onPostExecute(List<InstagramMedia> photos) {
+            if (photos != null) {
+                Intent intent = new Intent(mContext, PhotoSelectionActivity.class);
+                Bundle extras = new Bundle();
+                extras.putParcelableArrayList(EXTRA_PHOTOS, (ArrayList<InstagramMedia>) photos);
+                intent.putExtras(extras);
+                startActivity(intent);
+            } else {
+                mUserSelectButton.setEnabled(true);
+            }
         }
 
         // ------------------- PRIVATE -------------------
@@ -139,9 +216,7 @@ public class UserSelectionActivity extends Activity implements View.OnClickListe
             return new JSONObject(response);
         }
 
-        private ArrayList<InstagramMedia> parseMediaData(JSONArray data) throws JSONException {
-            final ArrayList<InstagramMedia> result = new ArrayList<InstagramMedia>();
-
+        private void parseMediaData(List<InstagramMedia> photos, JSONArray data) throws JSONException {
             for (int i = 0, l = data.length(); i < l; ++i) {
                 JSONObject media = (JSONObject) data.get(i);
                 if (media.getString(RESPONSE_MEDIA_TYPE_FIELD_NAME)
@@ -155,13 +230,20 @@ public class UserSelectionActivity extends Activity implements View.OnClickListe
                             .getString(RESPONSE_MEDIA_IMAGES_URL_FIELD_NAME);
                     int likesCount = media.getJSONObject(RESPONSE_MEDIA_LIKES_FIELD_NAME)
                             .getInt(RESPONSE_MEDIA_LIKES_COUNT_FIELD_NAME);
-                    result.add(new InstagramMedia(thumbnailImageUrl, standardResolutionImageUrl, likesCount));
+                    photos.add(new InstagramMedia(thumbnailImageUrl, standardResolutionImageUrl, likesCount));
                 }
             }
+        }
 
-            Collections.sort(result, new LikesCountDescendingComparator());
+        // -------------------- INNER --------------------
 
-            return result;
+        private class LikesCountDescendingComparator implements Comparator<InstagramMedia> {
+
+            @Override
+            public int compare(InstagramMedia oA, InstagramMedia oB) {
+                return oA.getLikesCount() < oB.getLikesCount() ? 1 :
+                        oA.getLikesCount() == oB.getLikesCount() ? 0 : -1;
+            }
         }
 
     }

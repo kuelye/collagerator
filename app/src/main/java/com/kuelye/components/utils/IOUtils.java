@@ -1,22 +1,19 @@
 package com.kuelye.components.utils;
 
 import android.graphics.Bitmap;
-import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 
 public final class IOUtils {
 
     private static final int BUFFER_SIZE = 1024;
 
-    public static String readFullyAndCloseSilently(InputStream /**@Nullable*/ in
-            , String /**@NotNull*/ encoding)
+    public static String readFullyAndCloseSilently(InputStream in
+            , String encoding)
             throws IOException {
         try {
             return new String(readFully(in), encoding);
@@ -25,9 +22,9 @@ public final class IOUtils {
         }
     }
 
-    public static void writeBitmapAndCloseSilently(OutputStream /**@Nullable*/ out
-            , Bitmap /**@NotNull*/ bitmap
-            , Bitmap.CompressFormat /**@NotNull*/ compressFormat
+    public static void writeBitmapAndCloseSilently(OutputStream out
+            , Bitmap bitmap
+            , Bitmap.CompressFormat compressFormat
             , int quality) {
         bitmap.compress(compressFormat, quality, out);
         closeSilenty(out);

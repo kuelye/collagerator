@@ -2,14 +2,14 @@
 <resources>
     <!-- user_selection_activity -->
     <item type="id" name="user_select_button" />
-    <item type="id" name="user_id_edit_text" />
+    <item type="id" name="user_name_edit_text" />
     <!-- photo_selection_activity -->
     <item type="id" name="photos_grid_view" />
     <item type="id" name="photo_layout" />
     <item type="id" name="photo_image_view" />
     <item type="id" name="likes_count_text_view" />
     <item type="id" name="photo_select_button" />
-    <!-- result_collage_activity -->
+    <!-- send_collage_activity -->
     <item type="id" name="collage_image_view" />
     <item type="id" name="send_collage_button" />
 </resources>

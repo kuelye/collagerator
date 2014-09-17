@@ -1,16 +1,13 @@
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context="com.kuelye.demo.collagerator.gui.PhotoSelectionActivity" >
 
     <LinearLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
         android:id="@id/photo_layout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="@dimen/photo_selection_thumbnail_spacing" >
+        android:padding="@dimen/photo_selection_thumbnail_spacing"
+        tools:context="com.kuelye.demo.collagerator.gui.PhotoSelectionActivity" >
 
         <ImageView
             android:id="@id/photo_image_view"
@@ -24,4 +21,3 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal" />
     </LinearLayout>
-</LinearLayout>

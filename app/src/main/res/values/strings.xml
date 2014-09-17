@@ -5,10 +5,17 @@
     <!-- user_selection_activity -->
     <string name="user_selection_activity_title">Collagerator</string>
     <string name="user_select_button_text">Make a collage</string>
+    <string name="user_name_edit_text_hint">Username</string>
+    <string name="toast_error_can_not_find_user_text">Can\'t find user with this username</string>
+    <string name="toast_error_exception_text">Failed due to exception</string>
+    <string name="toast_error_no_photos_text">User doesn\'t have published photos</string>
     <!-- photo_selection_activity -->
-    <string name="photo_selection_activity_title">Select</string>
+    <string name="photo_selection_activity_title">Collagerator</string>
     <string name="photo_select_button_text">Make a collage</string>
-    <!-- result_collage_activity -->
-    <string name="send_collage_activity_title">Send</string>
+    <!-- send_collage_activity -->
+    <string name="send_collage_activity_title">Collagerator</string>
     <string name="send_collage_button_text">Send a collage</string>
+    <string name="mail_intent_title">Send collage...</string>
+    <string name="mail_subject">My amazing collage</string>
+    <string name="mail_text">Created with Collagerator</string>
 </resources>

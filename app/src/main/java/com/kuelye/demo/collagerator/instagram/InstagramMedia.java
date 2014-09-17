@@ -5,6 +5,19 @@ import android.os.Parcelable;
 
 public class InstagramMedia implements Parcelable {
 
+    public static final Parcelable.Creator<InstagramMedia> CREATOR
+            = new Parcelable.Creator<InstagramMedia>() {
+
+        public InstagramMedia createFromParcel(Parcel in) {
+            return new InstagramMedia(in);
+        }
+
+        public InstagramMedia[] newArray(int size) {
+            return new InstagramMedia[size];
+        }
+
+    };
+
     private final String    mThumbnailImageUrl;
     private final String    mStandardResolutionImageUrl;
     private final int       mLikesCount;
@@ -22,11 +35,6 @@ public class InstagramMedia implements Parcelable {
         mThumbnailImageUrl = in.readString();
         mStandardResolutionImageUrl = in.readString();
         mLikesCount = in.readInt();
-    }
-
-    @Override
-    public String toString() {
-        return mThumbnailImageUrl + "|" + mStandardResolutionImageUrl + "|" + mLikesCount;
     }
 
     @Override
@@ -60,16 +68,5 @@ public class InstagramMedia implements Parcelable {
     public boolean isSelected() {
         return mSelected;
     }
-
-    public static final Parcelable.Creator<InstagramMedia> CREATOR
-            = new Parcelable.Creator<InstagramMedia>() {
-        public InstagramMedia createFromParcel(Parcel in) {
-            return new InstagramMedia(in);
-        }
-
-        public InstagramMedia[] newArray(int size) {
-            return new InstagramMedia[size];
-        }
-    };
 
 }

@@ -21,6 +21,7 @@ import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.kuelye.components.utils.IOUtils;
 import com.kuelye.demo.collagerator.R;
@@ -37,7 +38,7 @@ import java.util.List;
 import static android.graphics.Bitmap.CompressFormat.JPEG;
 import static com.kuelye.demo.collagerator.gui.SendCollageActivity.EXTRA_COLLAGE_FILE_URI;
 
-public class PhotoSelectionActivity extends Activity implements View.OnClickListener {
+public class PhotoSelectionActivity extends Activity implements View.OnClickListener, AdapterView.OnItemClickListener {
 
     public static final String EXTRA_PHOTOS = "EXTRA_PHOTOS";
 
@@ -50,7 +51,10 @@ public class PhotoSelectionActivity extends Activity implements View.OnClickList
 
     private static final String     FILE_PROVIDER_AUTHORITY     = "com.kuelye.demo.collagerator";
 
-    private List<InstagramMedia> mPhotos;
+    private static final int        ERROR_EXCEPTION_CODE        = 1;
+
+    private List<InstagramMedia>    mPhotos;
+    private Button                  mPhotoSelectButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,14 +66,12 @@ public class PhotoSelectionActivity extends Activity implements View.OnClickList
 
         final GridView gridView = (GridView) findViewById(R.id.photos_grid_view);
         final InstagramMediaAdapter adapter = new InstagramMediaAdapter(
-                this, R.layout.photo_selection_activity_row, mPhotos);
+                this, R.layout.photo_selection_row, mPhotos);
         gridView.setAdapter(adapter);
+        gridView.setOnItemClickListener(this);
 
-        final OnPhotoClickListener onItemClickListener = new OnPhotoClickListener();
-        gridView.setOnItemClickListener(onItemClickListener);
-
-        final Button photoSelectButton = (Button) findViewById(R.id.photo_select_button);
-        photoSelectButton.setOnClickListener(this);
+        mPhotoSelectButton = (Button) findViewById(R.id.photo_select_button);
+        mPhotoSelectButton.setOnClickListener(this);
     }
 
     @Override
@@ -77,9 +79,26 @@ public class PhotoSelectionActivity extends Activity implements View.OnClickList
         switch (view.getId()) {
             case R.id.photo_select_button: {
                 new MergePhotosTask(this).execute(mPhotos);
+                break;
             }
         }
     }
+
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        final InstagramMedia photo = mPhotos.get(position);
+        photo.setSelected(!photo.isSelected());
+        checkPhotoSelection(view, photo);
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        mPhotoSelectButton.setEnabled(true);
+    }
+
+    // ------------------- PRIVATE -------------------
 
     private void checkPhotoSelection(View photoView, InstagramMedia photo) {
         ViewHolder rowViewHolder = (ViewHolder) photoView.getTag();
@@ -141,17 +160,6 @@ public class PhotoSelectionActivity extends Activity implements View.OnClickList
 
     }
 
-    private class OnPhotoClickListener implements AdapterView.OnItemClickListener {
-
-        @Override
-        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-            final InstagramMedia photo = mPhotos.get(position);
-            photo.setSelected(!photo.isSelected());
-            checkPhotoSelection(view, photo);
-        }
-
-    }
-
     private class ViewHolder {
 
         public LinearLayout photoLayout;
@@ -160,7 +168,7 @@ public class PhotoSelectionActivity extends Activity implements View.OnClickList
 
     }
 
-    private class MergePhotosTask extends AsyncTask<List<InstagramMedia>, Void, Uri> {
+    private class MergePhotosTask extends AsyncTask<List<InstagramMedia>, Integer, Uri> {
 
         private final Context mContext;
 
@@ -169,11 +177,17 @@ public class PhotoSelectionActivity extends Activity implements View.OnClickList
         }
 
         @Override
+        protected void onPreExecute() {
+            mPhotoSelectButton.setEnabled(false);
+        }
+
+        @SuppressWarnings("ResultOfMethodCallIgnored")
+        @Override
         protected Uri doInBackground(List<InstagramMedia>... params) {
             final List<InstagramMedia> photos = params[0];
 
             try {
-                List<Bitmap> bitmaps = new ArrayList<Bitmap>();
+                final List<Bitmap> bitmaps = new ArrayList<Bitmap>();
                 for (InstagramMedia photo : photos) {
                     if (photo.isSelected()) {
                         bitmaps.add(Picasso.with(mContext)
@@ -183,11 +197,11 @@ public class PhotoSelectionActivity extends Activity implements View.OnClickList
                     }
                 }
 
-                int size = bitmaps.get(0).getWidth();
-                Bitmap collage = Bitmap.createBitmap(size * bitmaps.size()
+                final int size = bitmaps.get(0).getWidth();
+                final Bitmap collage = Bitmap.createBitmap(size * bitmaps.size()
                         , size, Bitmap.Config.ARGB_8888);
-                Canvas canvas = new Canvas(collage);
-                Paint paint = new Paint();
+                final Canvas canvas = new Canvas(collage);
+                final Paint paint = new Paint();
 
                 for (int i = 0, l = bitmaps.size(); i < l; ++i) {
                     canvas.drawBitmap(bitmaps.get(i), size * i, 0, paint);
@@ -202,23 +216,45 @@ public class PhotoSelectionActivity extends Activity implements View.OnClickList
                 final OutputStream out = new FileOutputStream(collageFileName);
                 IOUtils.writeBitmapAndCloseSilently(out, collage, COLLAGE_COMPRESS_FORMAT, COLLAGE_QUALITY);
                 collageFile = new File(collageFileName);
-                Uri collageFileUri = FileProvider.getUriForFile(mContext, FILE_PROVIDER_AUTHORITY, collageFile);
 
-                return collageFileUri;
+                return FileProvider.getUriForFile(mContext, FILE_PROVIDER_AUTHORITY, collageFile);
             } catch (IOException e) {
                 Log.e(TAG, "", e);
+                publishProgress(ERROR_EXCEPTION_CODE);
             }
 
             return null;
         }
 
         @Override
+        protected void onProgressUpdate(Integer... progress) {
+            final int code = progress[0];
+
+            int toastMessageResId = -1;
+            switch (code) {
+                case ERROR_EXCEPTION_CODE: {
+                    toastMessageResId = R.string.toast_error_exception_text;
+                    break;
+                }
+            }
+
+            if (toastMessageResId != -1) {
+                Toast.makeText(mContext, toastMessageResId, Toast.LENGTH_SHORT).show();
+                mPhotoSelectButton.setEnabled(true);
+            }
+        }
+
+        @Override
         protected void onPostExecute(Uri collageFileUri) {
-            Intent intent = new Intent(PhotoSelectionActivity.this, SendCollageActivity.class);
-            Bundle extras = new Bundle();
-            extras.putParcelable(EXTRA_COLLAGE_FILE_URI, collageFileUri);
-            intent.putExtras(extras);
-            startActivity(intent);
+            if (collageFileUri != null) {
+                Intent intent = new Intent(PhotoSelectionActivity.this, SendCollageActivity.class);
+                Bundle extras = new Bundle();
+                extras.putParcelable(EXTRA_COLLAGE_FILE_URI, collageFileUri);
+                intent.putExtras(extras);
+                startActivity(intent);
+            } else {
+                mPhotoSelectButton.setEnabled(true);
+            }
         }
     }
 
