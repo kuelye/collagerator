@@ -6,8 +6,10 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v4.content.FileProvider;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,21 +22,33 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.kuelye.components.utils.IOUtils;
 import com.kuelye.demo.collagerator.R;
 import com.kuelye.demo.collagerator.instagram.InstagramMedia;
 import com.squareup.picasso.Picasso;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.kuelye.demo.collagerator.gui.SendCollageActivity.EXTRA_COLLAGE;
+import static android.graphics.Bitmap.CompressFormat.JPEG;
+import static com.kuelye.demo.collagerator.gui.SendCollageActivity.EXTRA_COLLAGE_FILE_URI;
 
 public class PhotoSelectionActivity extends Activity implements View.OnClickListener {
 
+    public static final String EXTRA_PHOTOS = "EXTRA_PHOTOS";
+
     private static final String TAG = "com.demo.collagerator.gui.PhotoSelectionActivity";
 
-    public static final String EXTRA_PHOTOS = "EXTRA_PHOTOS";
+    private static final String     COLLAGE_RELATIVE_FILE_NAME  = "collages/collage.jpg";
+    private static final Bitmap.CompressFormat
+                                    COLLAGE_COMPRESS_FORMAT     = JPEG;
+    private static final int        COLLAGE_QUALITY             = 90;
+
+    private static final String     FILE_PROVIDER_AUTHORITY     = "com.kuelye.demo.collagerator";
 
     private List<InstagramMedia> mPhotos;
 
@@ -62,7 +76,6 @@ public class PhotoSelectionActivity extends Activity implements View.OnClickList
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.photo_select_button: {
-                Log.d("GUB", "!");
                 new MergePhotosTask(this).execute(mPhotos);
             }
         }
@@ -147,7 +160,7 @@ public class PhotoSelectionActivity extends Activity implements View.OnClickList
 
     }
 
-    private class MergePhotosTask extends AsyncTask<List<InstagramMedia>, Void, Bitmap> {
+    private class MergePhotosTask extends AsyncTask<List<InstagramMedia>, Void, Uri> {
 
         private final Context mContext;
 
@@ -156,7 +169,7 @@ public class PhotoSelectionActivity extends Activity implements View.OnClickList
         }
 
         @Override
-        protected Bitmap doInBackground(List<InstagramMedia>... params) {
+        protected Uri doInBackground(List<InstagramMedia>... params) {
             final List<InstagramMedia> photos = params[0];
 
             try {
@@ -180,7 +193,18 @@ public class PhotoSelectionActivity extends Activity implements View.OnClickList
                     canvas.drawBitmap(bitmaps.get(i), size * i, 0, paint);
                 }
 
-                return collage;
+                final String collageFileName = mContext.getFilesDir() + File.separator + COLLAGE_RELATIVE_FILE_NAME;
+                File collageFile = new File(collageFileName);
+                collageFile.mkdirs();
+                if (collageFile.exists()) {
+                    collageFile.delete();
+                }
+                final OutputStream out = new FileOutputStream(collageFileName);
+                IOUtils.writeBitmapAndCloseSilently(out, collage, COLLAGE_COMPRESS_FORMAT, COLLAGE_QUALITY);
+                collageFile = new File(collageFileName);
+                Uri collageFileUri = FileProvider.getUriForFile(mContext, FILE_PROVIDER_AUTHORITY, collageFile);
+
+                return collageFileUri;
             } catch (IOException e) {
                 Log.e(TAG, "", e);
             }
@@ -189,10 +213,10 @@ public class PhotoSelectionActivity extends Activity implements View.OnClickList
         }
 
         @Override
-        protected void onPostExecute(Bitmap collage) {
+        protected void onPostExecute(Uri collageFileUri) {
             Intent intent = new Intent(PhotoSelectionActivity.this, SendCollageActivity.class);
             Bundle extras = new Bundle();
-            extras.putParcelable(EXTRA_COLLAGE, collage);
+            extras.putParcelable(EXTRA_COLLAGE_FILE_URI, collageFileUri);
             intent.putExtras(extras);
             startActivity(intent);
         }

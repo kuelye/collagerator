@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 
-import static com.kuelye.components.utils.IOUtils.readFullyAndClose;
+import static com.kuelye.components.utils.IOUtils.readFullyAndCloseSilently;
 import static com.kuelye.demo.collagerator.gui.PhotoSelectionActivity.EXTRA_PHOTOS;
 
 public class UserSelectionActivity extends Activity implements View.OnClickListener {
@@ -134,7 +134,7 @@ public class UserSelectionActivity extends Activity implements View.OnClickListe
         private JSONObject getResponse(String request) throws IOException, JSONException {
             final URL url = new URL(request);
             final InputStream in = url.openConnection().getInputStream();
-            final String response = readFullyAndClose(in, RESPONSE_ENCODING);
+            final String response = readFullyAndCloseSilently(in, RESPONSE_ENCODING);
 
             return new JSONObject(response);
         }

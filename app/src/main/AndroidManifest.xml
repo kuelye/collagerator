@@ -11,8 +11,8 @@
         android:theme="@style/theme_standard" >
 
         <activity
-            android:name=".gui.UserSelectionActivity"
-            android:label="@string/user_selection_activity_title" >
+            android:label="@string/user_selection_activity_title"
+            android:name=".gui.UserSelectionActivity" >
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -21,13 +21,24 @@
         </activity>
 
         <activity
-            android:name=".gui.PhotoSelectionActivity"
-            android:label="@string/photo_selection_activity_title" >
+            android:label="@string/photo_selection_activity_title"
+            android:name=".gui.PhotoSelectionActivity" >
         </activity>
 
         <activity
-            android:name=".gui.SendCollageActivity"
-            android:label="@string/send_collage_activity_title" >
+            android:label="@string/send_collage_activity_title"
+            android:name=".gui.SendCollageActivity" >
         </activity>
+        
+        <provider
+            android:authorities="com.kuelye.demo.collagerator"
+            android:exported="false"
+            android:grantUriPermissions="true"
+            android:name="android.support.v4.content.FileProvider" >
+
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_provider_paths" />
+        </provider>
     </application>
 </manifest>
