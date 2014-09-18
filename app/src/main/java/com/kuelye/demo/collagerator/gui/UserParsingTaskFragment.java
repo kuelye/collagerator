@@ -6,7 +6,7 @@ import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 
-import com.kuelye.components.async.MessageAndErrorCodeProgress;
+import com.kuelye.components.async.RetainedAsyncTaskFragment;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -15,11 +15,11 @@ import org.json.JSONObject;
 import java.io.IOException;
 
 import static com.kuelye.components.utils.NetworkUtils.getResponse;
+import static com.kuelye.demo.collagerator.gui.UserParsingTaskFragment.ProgressCode.EXCEPTION_CATCHED;
+import static com.kuelye.demo.collagerator.gui.UserParsingTaskFragment.ProgressCode.USER_NOT_FOUND;
 
-public class UserParsingTaskFragment extends Fragment {
-
-    public static final int     ERROR_CAN_NOT_FIND_USER_CODE            = 1;
-    public static final int     ERROR_CATCH_EXCEPTION_CODE              = 2;
+public class UserParsingTaskFragment extends RetainedAsyncTaskFragment
+        <String, UserParsingTaskFragment.ProgressCode, UserParsingTaskFragment.ResultHolder> {
 
     private static final String TAG
             = "com.demo.collagerator.gui.UserParsingTaskFragment";
@@ -82,9 +82,17 @@ public class UserParsingTaskFragment extends Fragment {
 
     static interface Handler {
         void onPreExecute();
-        void onProgressUpdate(MessageAndErrorCodeProgress progress);
+        void onProgressUpdate(ProgressCode progressCode);
         void onCancelled();
         void onPostExecute(ResultHolder resultHolder);
+    }
+
+    static enum ProgressCode {
+
+        EMPTY,
+        USER_NOT_FOUND,
+        EXCEPTION_CATCHED
+
     }
 
     static class ResultHolder {
@@ -94,7 +102,7 @@ public class UserParsingTaskFragment extends Fragment {
 
     }
 
-    private class UserIdParsingTask extends AsyncTask<String, MessageAndErrorCodeProgress, ResultHolder> {
+    private class UserIdParsingTask extends AsyncTask<String, ProgressCode, ResultHolder> {
 
         @Override
         protected void onPreExecute() {
@@ -124,7 +132,7 @@ public class UserParsingTaskFragment extends Fragment {
                 }
 
                 if (result.userId == -1) {
-                    publishProgress(new MessageAndErrorCodeProgress(ERROR_CAN_NOT_FIND_USER_CODE));
+                    publishProgress(USER_NOT_FOUND);
                     return null;
                 }
 
@@ -136,10 +144,10 @@ public class UserParsingTaskFragment extends Fragment {
 
                 return result;
             } catch (IOException e) {
-                publishProgress(new MessageAndErrorCodeProgress(ERROR_CATCH_EXCEPTION_CODE));
+                publishProgress(EXCEPTION_CATCHED);
                 Log.e(TAG, "", e);
             } catch (JSONException e) {
-                publishProgress(new MessageAndErrorCodeProgress(ERROR_CATCH_EXCEPTION_CODE));
+                publishProgress(EXCEPTION_CATCHED);
                 Log.e(TAG, "", e);
             }
 
@@ -147,11 +155,11 @@ public class UserParsingTaskFragment extends Fragment {
         }
 
         @Override
-        protected void onProgressUpdate(MessageAndErrorCodeProgress... values) {
+        protected void onProgressUpdate(ProgressCode... values) {
             if (mHandler != null) {
-                final MessageAndErrorCodeProgress progress = values[0];
+                final ProgressCode progressCode = values[0];
 
-                mHandler.onProgressUpdate(progress);
+                mHandler.onProgressUpdate(progressCode);
             }
         }
 

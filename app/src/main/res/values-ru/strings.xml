@@ -6,8 +6,8 @@
     <string name="user_selection_activity_title">Collagerator</string>
     <string name="user_select_button_text">Давай коллаж</string>
     <string name="user_name_edit_text_hint">Имя пользователя</string>
-    <string name="toast_error_can_not_find_user_text">Пользователь не найден</string>
-    <string name="toast_error_catch_exception_text">Поиск завершен с ошибкой</string>
+    <string name="error_toast_user_not_fount_text">Пользователь не найден</string>
+    <string name="error_toast_exception_catched_text">Поиск завершен с ошибкой</string>
     <string name="toast_error_no_photos_text">No photos</string>
     <!-- photo_selection_activity -->
     <string name="photo_selection_activity_title">Collagerator</string>

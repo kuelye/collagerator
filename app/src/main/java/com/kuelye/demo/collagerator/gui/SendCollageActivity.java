@@ -44,7 +44,7 @@ public class SendCollageActivity extends Activity implements View.OnClickListene
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
-            case R.id.send_collage_button: {
+            case R.id.send_collage_button:
                 Intent intent = new Intent(android.content.Intent.ACTION_SEND);
                 intent.setType(EMAIL_INTENT_TYPE);
                 final Resources resources = getResources();
@@ -56,7 +56,6 @@ public class SendCollageActivity extends Activity implements View.OnClickListene
                 intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 final String intentTitle =  resources.getString(R.string.mail_intent_title);
                 startActivity(Intent.createChooser(intent, intentTitle));
-            }
         }
     }
 

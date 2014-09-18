@@ -1,9 +1,12 @@
 package com.kuelye.demo.collagerator.gui;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
-import android.util.Log;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
@@ -11,7 +14,6 @@ import android.widget.GridView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.kuelye.components.async.MessageAndErrorCodeProgress;
 import com.kuelye.demo.collagerator.R;
 import com.kuelye.demo.collagerator.instagram.InstagramMedia;
 
@@ -19,15 +21,19 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static com.kuelye.demo.collagerator.gui.PhotoMergingTaskLoader.ARGS_DISPLAYED_PHOTOS;
 import static com.kuelye.demo.collagerator.gui.PhotoSelectionAdapter.checkPhotoSelection;
-import static com.kuelye.demo.collagerator.gui.PhotoParsingTaskFragment.ERROR_CATCH_EXCEPTION_CODE;
+import static com.kuelye.demo.collagerator.gui.SendCollageActivity.EXTRA_COLLAGE_FILE_URI;
 
 public class PhotoSelectionActivity extends FragmentActivity
-        implements View.OnClickListener, AdapterView.OnItemClickListener,
-        PhotoParsingTaskFragment.Handler, PhotoSelectionContext {
+        implements View.OnClickListener, AdapterView.OnItemClickListener
+        , PhotoParsingTaskFragment.Handler, PhotoSelectionContext
+        , LoaderManager.LoaderCallbacks<Uri> {
 
-    public static final String EXTRA_USER_ID                    = "USER_ID";
-    public static final String EXTRA_MEDIA_COUNT                = "MEDIA_COUNT";
+    public static final String  EXTRA_USER_ID                   = "USER_ID";
+    public static final String  EXTRA_MEDIA_COUNT               = "MEDIA_COUNT";
+
+    private static final int ID_PHOTO_MERGING_TASK_LOADER       = 1;
 
     private static final String TAG_PHOTO_PARSING_TASK_FRAGMENT
             = "PHOTO_PARSING_TASK_FRAGMENT";
@@ -46,6 +52,7 @@ public class PhotoSelectionActivity extends FragmentActivity
     private int                         mProcessedCount;
     private String                      mPaginationNextMaxId;
 
+    private GridView                    mGridView;
     private TextView                    mProcessedTextView;
     private PhotoSelectionAdapter       mAdapter;
     private Button                      mPhotoSelectButton;
@@ -65,10 +72,10 @@ public class PhotoSelectionActivity extends FragmentActivity
 
         mProcessedTextView = (TextView) findViewById(R.id.processed_text_view);
         setProcessedText();
-        final GridView gridView = (GridView) findViewById(R.id.photos_grid_view);
+        mGridView = (GridView) findViewById(R.id.photos_grid_view);
         mAdapter = new PhotoSelectionAdapter(this, this, R.layout.photo_selection_row, mDisplayedPhotos);
-        gridView.setAdapter(mAdapter);
-        gridView.setOnItemClickListener(this);
+        mGridView.setAdapter(mAdapter);
+        mGridView.setOnItemClickListener(this);
         mPhotoSelectButton = (Button) findViewById(R.id.photo_select_button);
         mPhotoSelectButton.setOnClickListener(this);
 
@@ -87,10 +94,14 @@ public class PhotoSelectionActivity extends FragmentActivity
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
-            case R.id.photo_select_button: {
-                //new MergePhotosTask(this).execute(mPhotos);
+            case R.id.photo_select_button:
+                setUiEnabled(false);
+                Bundle args = new Bundle();
+                args.putParcelableArrayList(ARGS_DISPLAYED_PHOTOS
+                        , (ArrayList<InstagramMedia>) mDisplayedPhotos);
+                Loader<Uri> loader = getSupportLoaderManager()
+                        .initLoader(ID_PHOTO_MERGING_TASK_LOADER, args, this);
                 break;
-            }
         }
     }
 
@@ -107,19 +118,17 @@ public class PhotoSelectionActivity extends FragmentActivity
     }
 
     @Override
-    public void onProgressUpdate(MessageAndErrorCodeProgress progress) {
-        if (progress.isError()) {
-            int toastMessageResId = -1;
-            switch (progress.getErrorCode()) {
-                case ERROR_CATCH_EXCEPTION_CODE: {
-                    toastMessageResId = R.string.toast_error_catch_exception_text;
-                    break;
-                }
-            }
+    public void onProgressUpdate(PhotoParsingTaskFragment.ProgressCode progressCode) {
+        int toastMessageResId = -1;
+        switch (progressCode) {
+            case EXCEPTION_CATCHED:
+                toastMessageResId = R.string.error_toast_exception_catched_text;
+                break;
+            case EMPTY:
+        }
 
-            if (toastMessageResId != -1) {
-                Toast.makeText(this, toastMessageResId, Toast.LENGTH_SHORT).show();
-            }
+        if (toastMessageResId != -1) {
+            Toast.makeText(this, toastMessageResId, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -146,31 +155,70 @@ public class PhotoSelectionActivity extends FragmentActivity
     @Override
     public void checkPosition(int position) {
         if (position == mDisplayedPagesCount * PHOTOS_PER_PAGE - 1) {
+            mDisplayedPagesCount++;
             updateDisplayedPhotos(false);
         }
     }
 
+    @Override
+    public Loader<Uri> onCreateLoader(int id, Bundle args) {
+        Loader<Uri> loader = null;
+
+        if (id == ID_PHOTO_MERGING_TASK_LOADER) {
+            loader = new PhotoMergingTaskLoader(this, args);
+        }
+
+        return loader;
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Uri> uriLoader, Uri uri) {
+        if (uri != null) {
+            Intent intent = new Intent(PhotoSelectionActivity.this, SendCollageActivity.class);
+            Bundle extras = new Bundle();
+            extras.putParcelable(EXTRA_COLLAGE_FILE_URI, uri);
+            intent.putExtras(extras);
+            startActivity(intent);
+        } else {
+            setUiEnabled(true);
+        }
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Uri> uriLoader) {
+        setUiEnabled(true);
+    }
+
     // ------------------- PRIVATE -------------------
 
-    public void setProcessedText() {
+    private void setUiEnabled(boolean enabled) {
+        mPhotoSelectButton.setEnabled(enabled);
+        mGridView.setEnabled(enabled);
+    }
+
+    private void setProcessedText() {
         mProcessedTextView.setText(
                 String.format(PROCESSED_TEXT_TEMPLATE, mProcessedCount, mMediaCount));
     }
 
-    public void updateDisplayedPhotos(boolean full) {
+    private void updateDisplayedPhotos(boolean full) {
         int iMin = 0;
-        final int iMax = Math.min(mDisplayedPagesCount * PHOTOS_PER_PAGE - 1, mPhotos.size());
+        final int iMax = Math.min(mDisplayedPagesCount * PHOTOS_PER_PAGE, mPhotos.size());
 
         if (full) {
-            mDisplayedPhotos = new ArrayList<InstagramMedia>();
+            if (mDisplayedPhotos == null) {
+                mDisplayedPhotos = new ArrayList<InstagramMedia>();
+            } else {
+                mDisplayedPhotos.clear();
+            }
         } else {
             iMin = mDisplayedPhotos.size();
         }
-        Log.d("GUB", iMin + "/" + iMax);
 
         for (int i = iMin; i < iMax; ++i) {
             mDisplayedPhotos.add(mPhotos.get(i));
         }
+
         if (mAdapter != null) {
             mAdapter.notifyDataSetChanged();
         }

@@ -6,7 +6,6 @@ import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 
-import com.kuelye.components.async.MessageAndErrorCodeProgress;
 import com.kuelye.demo.collagerator.instagram.InstagramMedia;
 
 import org.json.JSONArray;
@@ -18,10 +17,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.kuelye.components.utils.NetworkUtils.getResponse;
+import static com.kuelye.demo.collagerator.gui.PhotoParsingTaskFragment.ProgressCode.EXCEPTION_CATCHED;
 
 public class PhotoParsingTaskFragment extends Fragment {
-
-    public static final int ERROR_CATCH_EXCEPTION_CODE = 1;
 
     private static final String TAG
             = "com.demo.collagerator.gui.PhotosParsingTaskFragment";
@@ -96,7 +94,7 @@ public class PhotoParsingTaskFragment extends Fragment {
 
     static interface Handler {
         void onPreExecute();
-        void onProgressUpdate(MessageAndErrorCodeProgress progress);
+        void onProgressUpdate(ProgressCode progressCode);
         void onCancelled();
         void onPostExecute(ResultHolder resultHolder);
     }
@@ -108,6 +106,13 @@ public class PhotoParsingTaskFragment extends Fragment {
 
     }
 
+    static enum ProgressCode {
+
+        EMPTY,
+        EXCEPTION_CATCHED
+
+    }
+
     static class ResultHolder {
 
         public List<InstagramMedia> nextPhotos;
@@ -116,7 +121,7 @@ public class PhotoParsingTaskFragment extends Fragment {
 
     }
 
-    private class PhotoParsingTask extends AsyncTask<ParamsHolder, MessageAndErrorCodeProgress, ResultHolder> {
+    private class PhotoParsingTask extends AsyncTask<ParamsHolder, ProgressCode, ResultHolder> {
 
         @Override
         protected void onPreExecute() {
@@ -149,10 +154,10 @@ public class PhotoParsingTaskFragment extends Fragment {
 
                 return resultHolder;
             } catch (IOException e) {
-                publishProgress(new MessageAndErrorCodeProgress(ERROR_CATCH_EXCEPTION_CODE));
+                publishProgress(EXCEPTION_CATCHED);
                 Log.e(TAG, "", e);
             } catch (JSONException e) {
-                publishProgress(new MessageAndErrorCodeProgress(ERROR_CATCH_EXCEPTION_CODE));
+                publishProgress(EXCEPTION_CATCHED);
                 Log.e(TAG, "", e);
             }
 
@@ -160,11 +165,11 @@ public class PhotoParsingTaskFragment extends Fragment {
         }
 
         @Override
-        protected void onProgressUpdate(MessageAndErrorCodeProgress... values) {
+        protected void onProgressUpdate(ProgressCode... values) {
             if (mHandler != null) {
-                final MessageAndErrorCodeProgress progress = values[0];
+                final ProgressCode progressCode = values[0];
 
-                mHandler.onProgressUpdate(progress);
+                mHandler.onProgressUpdate(progressCode);
             }
         }
 

@@ -9,13 +9,10 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import com.kuelye.components.async.MessageAndErrorCodeProgress;
 import com.kuelye.demo.collagerator.R;
 
 import static com.kuelye.demo.collagerator.gui.PhotoSelectionActivity.EXTRA_MEDIA_COUNT;
 import static com.kuelye.demo.collagerator.gui.PhotoSelectionActivity.EXTRA_USER_ID;
-import static com.kuelye.demo.collagerator.gui.UserParsingTaskFragment.ERROR_CAN_NOT_FIND_USER_CODE;
-import static com.kuelye.demo.collagerator.gui.UserParsingTaskFragment.ERROR_CATCH_EXCEPTION_CODE;
 
 public class UserSelectionActivity extends FragmentActivity
         implements View.OnClickListener, UserParsingTaskFragment.Handler {
@@ -24,7 +21,7 @@ public class UserSelectionActivity extends FragmentActivity
 
     private EditText                    mUserIdEditText;
     private Button                      mUserSelectButton;
-    private UserParsingTaskFragment mTaskFragment;
+    private UserParsingTaskFragment     mTaskFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,10 +52,9 @@ public class UserSelectionActivity extends FragmentActivity
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
-            case R.id.user_select_button: {
+            case R.id.user_select_button:
                 mTaskFragment.startTask(mUserIdEditText.getText().toString());
                 break;
-            }
         }
     }
 
@@ -68,24 +64,20 @@ public class UserSelectionActivity extends FragmentActivity
     }
 
     @Override
-    public void onProgressUpdate(MessageAndErrorCodeProgress progress) {
-        if (progress.isError()) {
-            int toastMessageResId = -1;
-            switch (progress.getErrorCode()) {
-                case ERROR_CAN_NOT_FIND_USER_CODE: {
-                    toastMessageResId = R.string.toast_error_can_not_find_user_text;
-                    break;
-                }
-                case ERROR_CATCH_EXCEPTION_CODE: {
-                    toastMessageResId = R.string.toast_error_catch_exception_text;
-                    break;
-                }
-            }
+    public void onProgressUpdate(UserParsingTaskFragment.ProgressCode progressCode) {
+        int toastMessageResId = -1;
+        switch (progressCode) {
+            case USER_NOT_FOUND:
+                toastMessageResId = R.string.error_toast_user_not_fount_text;
+                break;
+            case EXCEPTION_CATCHED:
+                toastMessageResId = R.string.error_toast_exception_catched_text;
+                break;
+            case EMPTY:
+        }
 
-            if (toastMessageResId != -1) {
-                Toast.makeText(this, toastMessageResId, Toast.LENGTH_SHORT).show();
-                setUiEnabled(true);
-            }
+        if (toastMessageResId != -1) {
+            Toast.makeText(this, toastMessageResId, Toast.LENGTH_SHORT).show();
         }
     }
 
