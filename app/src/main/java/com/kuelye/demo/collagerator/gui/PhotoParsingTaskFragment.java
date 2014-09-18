@@ -1,11 +1,8 @@
 package com.kuelye.demo.collagerator.gui;
 
-import android.app.Activity;
-import android.os.AsyncTask;
-import android.os.Bundle;
-import android.support.v4.app.Fragment;
 import android.util.Log;
 
+import com.kuelye.components.async.RetainedAsyncTaskFragment;
 import com.kuelye.demo.collagerator.instagram.InstagramMedia;
 
 import org.json.JSONArray;
@@ -17,9 +14,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.kuelye.components.utils.NetworkUtils.getResponse;
-import static com.kuelye.demo.collagerator.gui.PhotoParsingTaskFragment.ProgressCode.EXCEPTION_CATCHED;
+import static com.kuelye.demo.collagerator.gui.PhotoParsingTaskFragment.ProgressCode.EXCEPTION_CAUGHT;
 
-public class PhotoParsingTaskFragment extends Fragment {
+public class PhotoParsingTaskFragment extends RetainedAsyncTaskFragment
+        <PhotoParsingTaskFragment.ParamsHolder, PhotoParsingTaskFragment.ProgressCode
+                , PhotoParsingTaskFragment.ResultHolder, PhotoParsingTaskFragment.Task> {
 
     private static final String TAG
             = "com.demo.collagerator.gui.PhotosParsingTaskFragment";
@@ -46,60 +45,24 @@ public class PhotoParsingTaskFragment extends Fragment {
     private static final String RESPONSE_MEDIA_TYPE_IMAGE                       = "image";
     private static final String RESPONSE_PAGINATION_NEXT_MAX_ID_MIN             = "0";
 
-    private Handler             mHandler;
-    private PhotoParsingTask    mTask;
-
     @Override
-    public void onAttach(Activity activity) {
-        super.onAttach(activity);
-
-        mHandler = (Handler) activity;
-    }
-
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-        setRetainInstance(true);
-    }
-
-    @Override
-    public void onDetach() {
-        super.onDetach();
-
-        mHandler = null;
-    }
-
-    public void startTask(Integer userId, String nextMaxId) {
-        cancelTask();
-
-        mTask = new PhotoParsingTask();
-        final ParamsHolder params = new ParamsHolder();
-        params.userId = userId;
-        params.nextMaxId = nextMaxId;
-        mTask.execute(params);
-    }
-
-    public void cancelTask() {
-        if (mTask != null) {
-            mTask.cancel(true);
-        }
-    }
-
-    public boolean isExecuted() {
-        return mTask != null;
+    protected PhotoParsingTaskFragment.Task createTask() {
+        return new PhotoParsingTaskFragment.Task();
     }
 
     // -------------------- INNER --------------------
 
-    static interface Handler {
-        void onPreExecute();
-        void onProgressUpdate(ProgressCode progressCode);
-        void onCancelled();
-        void onPostExecute(ResultHolder resultHolder);
+    static interface Handler extends RetainedAsyncTaskFragment.Handler
+            <ProgressCode, ResultHolder> {
+
     }
 
     static class ParamsHolder {
+
+        public ParamsHolder(int userId, String nextMaxId) {
+            this.userId = userId;
+            this.nextMaxId = nextMaxId;
+        }
 
         public int      userId;
         public String   nextMaxId;
@@ -109,7 +72,7 @@ public class PhotoParsingTaskFragment extends Fragment {
     static enum ProgressCode {
 
         EMPTY,
-        EXCEPTION_CATCHED
+        EXCEPTION_CAUGHT
 
     }
 
@@ -121,14 +84,8 @@ public class PhotoParsingTaskFragment extends Fragment {
 
     }
 
-    private class PhotoParsingTask extends AsyncTask<ParamsHolder, ProgressCode, ResultHolder> {
-
-        @Override
-        protected void onPreExecute() {
-            if (mHandler != null) {
-                mHandler.onPreExecute();
-            }
-        }
+    static class Task extends RetainedAsyncTaskFragment.Task
+            <ParamsHolder, ProgressCode, ResultHolder> {
 
         @Override
         protected ResultHolder doInBackground(ParamsHolder... params) {
@@ -154,41 +111,14 @@ public class PhotoParsingTaskFragment extends Fragment {
 
                 return resultHolder;
             } catch (IOException e) {
-                publishProgress(EXCEPTION_CATCHED);
+                publishProgress(EXCEPTION_CAUGHT);
                 Log.e(TAG, "", e);
             } catch (JSONException e) {
-                publishProgress(EXCEPTION_CATCHED);
+                publishProgress(EXCEPTION_CAUGHT);
                 Log.e(TAG, "", e);
             }
 
             return null;
-        }
-
-        @Override
-        protected void onProgressUpdate(ProgressCode... values) {
-            if (mHandler != null) {
-                final ProgressCode progressCode = values[0];
-
-                mHandler.onProgressUpdate(progressCode);
-            }
-        }
-
-        @Override
-        protected void onCancelled() {
-            mTask = null;
-
-            if (mHandler != null) {
-                mHandler.onCancelled();
-            }
-        }
-
-        @Override
-        protected void onPostExecute(ResultHolder resultHolder) {
-            mTask = null;
-
-            if (mHandler != null) {
-                mHandler.onPostExecute(resultHolder);
-            }
         }
 
         // ------------------- PRIVATE -------------------

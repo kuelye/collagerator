@@ -2,20 +2,23 @@
 <resources>
     <!-- common -->
     <string name="application_name">Collagerator</string>
+    <string name="error_exception_catched_toast_text">Catch internal or network error</string>
     <!-- user_selection_activity -->
     <string name="user_selection_activity_title">Collagerator</string>
     <string name="user_select_button_text">Давай коллаж</string>
     <string name="user_name_edit_text_hint">Имя пользователя</string>
-    <string name="error_toast_user_not_fount_text">Пользователь не найден</string>
-    <string name="error_toast_exception_catched_text">Поиск завершен с ошибкой</string>
-    <string name="toast_error_no_photos_text">No photos</string>
+    <string name="error_user_not_found_toast_text">Пользователь не найден</string>
+    <string name="error_api_not_allowed_toast_text">Данные недоступны</string>
     <!-- photo_selection_activity -->
     <string name="photo_selection_activity_title">Collagerator</string>
+    <string name="photo_loaded_text_view_text">Обработано: </string>
     <string name="photo_select_button_text">Давай коллаж</string>
+    <string name="error_no_photo_chose_toast_text">Больше фоток плиз</string>
     <!-- send_collage_activity -->
     <string name="send_collage_activity_title">Collagerator</string>
-    <string name="send_collage_button_text">Отправь коллаж</string>
-    <string name="mail_intent_title">Отправка коллажа...</string>
+    <string name="send_collage_button_text">Отправить коллаж</string>
+    <string name="mail_intent_title">Отправка коллажа…</string>
     <string name="mail_subject">Мой невероятный коллаж</string>
-    <string name="mail_text">Создано с помощью Collagerator</string>
+    <string name="mail_text">Сделано с помощью Collagerator</string>
+    <string name="error_out_of_memory_toast_text">Меньше фоток плиз</string>
 </resources>

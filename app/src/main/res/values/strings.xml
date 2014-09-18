@@ -2,21 +2,23 @@
 <resources>
     <!-- common -->
     <string name="application_name">Collagerator</string>
+    <string name="error_exception_catched_toast_text">Catch internal or network error</string>
     <!-- user_selection_activity -->
     <string name="user_selection_activity_title">Collagerator</string>
     <string name="user_select_button_text">Make a collage</string>
     <string name="user_name_edit_text_hint">Username</string>
-    <string name="error_toast_user_not_fount_text">Can\'t find user with this username</string>
-    <string name="error_toast_exception_catched_text">Failed due to exception</string>
-    <string name="toast_error_no_photos_text">No photos</string>
+    <string name="error_user_not_found_toast_text">Can\'t find user with this username</string>
+    <string name="error_api_not_allowed_toast_text">Can\'t retrieve data for this user</string>
     <!-- photo_selection_activity -->
     <string name="photo_selection_activity_title">Collagerator</string>
     <string name="photo_loaded_text_view_text">Processed: </string>
     <string name="photo_select_button_text">Make a collage</string>
+    <string name="error_no_photo_chose_toast_text">Choose more photos</string>
     <!-- send_collage_activity -->
     <string name="send_collage_activity_title">Collagerator</string>
     <string name="send_collage_button_text">Send a collage</string>
-    <string name="mail_intent_title">Send collage...</string>
+    <string name="mail_intent_title">Send collage…</string>
     <string name="mail_subject">My amazing collage</string>
     <string name="mail_text">Created with Collagerator</string>
+    <string name="error_out_of_memory_toast_text">Choose less photos</string>
 </resources>

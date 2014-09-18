@@ -5,15 +5,19 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 
-public class RetainedAsyncTaskFragment<Param, Progress, Result> extends Fragment {
+public abstract class RetainedAsyncTaskFragment<Param, Progress, Result, Task
+        extends RetainedAsyncTaskFragment.Task<Param, Progress, Result>> extends Fragment {
 
-    private Handler<Param, Result>          mHandler;
-    private Task<Param, Progress, Result>   mTask;
+    private Handler<Progress, Result>   mHandler;
+    private Task                        mTask;
+
+    protected abstract Task createTask();
 
     @Override
     public void onAttach(Activity activity) {
         super.onAttach(activity);
 
+        //noinspection unchecked
         mHandler = (Handler) activity;
     }
 
@@ -31,13 +35,11 @@ public class RetainedAsyncTaskFragment<Param, Progress, Result> extends Fragment
         mHandler = null;
     }
 
-    public void setTask(Task<Param, Progress, Result> task) {
-        mTask = task;
-    }
-
     public void startTask(Param... params) {
         cancelTask();
 
+        mTask = createTask();
+        mTask.setHandler(mHandler);
         mTask.execute(params);
     }
 
@@ -48,21 +50,20 @@ public class RetainedAsyncTaskFragment<Param, Progress, Result> extends Fragment
     }
 
     public boolean isExecuted() {
-        return mTask != null;
+        return mTask != null && mTask.getStatus() == AsyncTask.Status.RUNNING ;
     }
 
     // -------------------- INNER --------------------
 
     public static interface Handler<Progress, Result> {
 
-        void onPreExecute();
-        void onProgressUpdate(Progress progress);
-        void onCancelled();
+        void onProgressUpdate(Progress... values);
+        void onCancelled(Result result);
         void onPostExecute(Result result);
 
     }
 
-    public abstract class Task<Param, Progress, Result>
+    public static abstract class Task<Param, Progress, Result>
             extends AsyncTask<Param, Progress, Result> {
 
         private Handler<Progress, Result> mHandler;
@@ -71,8 +72,25 @@ public class RetainedAsyncTaskFragment<Param, Progress, Result> extends Fragment
             mHandler = handler;
         }
 
-        public Handler<Progress, Result> getHandler() {
-            return mHandler;
+        @Override
+        protected void onProgressUpdate(Progress... values) {
+            if (mHandler != null) {
+                mHandler.onProgressUpdate(values);
+            }
+        }
+
+        @Override
+        protected void onCancelled(Result result) {
+            if (mHandler != null) {
+                mHandler.onCancelled(result);
+            }
+        }
+
+        @Override
+        protected void onPostExecute(Result result) {
+            if (mHandler != null) {
+                mHandler.onPostExecute(result);
+            }
         }
 
     }
