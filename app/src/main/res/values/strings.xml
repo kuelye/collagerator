@@ -7,10 +7,11 @@
     <string name="user_select_button_text">Make a collage</string>
     <string name="user_name_edit_text_hint">Username</string>
     <string name="toast_error_can_not_find_user_text">Can\'t find user with this username</string>
-    <string name="toast_error_exception_text">Failed due to exception</string>
-    <string name="toast_error_no_photos_text">User doesn\'t have published photos</string>
+    <string name="toast_error_catch_exception_text">Failed due to exception</string>
+    <string name="toast_error_no_photos_text">No photos</string>
     <!-- photo_selection_activity -->
     <string name="photo_selection_activity_title">Collagerator</string>
+    <string name="photo_loaded_text_view_text">Processed: </string>
     <string name="photo_select_button_text">Make a collage</string>
     <!-- send_collage_activity -->
     <string name="send_collage_activity_title">Collagerator</string>

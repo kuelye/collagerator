@@ -3,6 +3,8 @@ package com.kuelye.demo.collagerator.instagram;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import java.util.Comparator;
+
 public class InstagramMedia implements Parcelable {
 
     public static final Parcelable.Creator<InstagramMedia> CREATOR
@@ -67,6 +69,18 @@ public class InstagramMedia implements Parcelable {
 
     public boolean isSelected() {
         return mSelected;
+    }
+
+    // -------------------- INNER --------------------
+
+    public static class LikesCountDescendingComparator implements Comparator<InstagramMedia> {
+
+        @Override
+        public int compare(InstagramMedia oA, InstagramMedia oB) {
+            return oA.getLikesCount() < oB.getLikesCount() ? 1 :
+                    oA.getLikesCount() == oB.getLikesCount() ? 0 : -1;
+        }
+
     }
 
 }

@@ -4,6 +4,7 @@
     <item type="id" name="user_select_button" />
     <item type="id" name="user_name_edit_text" />
     <!-- photo_selection_activity -->
+    <item type="id" name="processed_text_view" />
     <item type="id" name="photos_grid_view" />
     <item type="id" name="photo_layout" />
     <item type="id" name="photo_image_view" />

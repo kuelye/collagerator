@@ -1,60 +1,55 @@
 package com.kuelye.demo.collagerator.gui;
 
-import android.app.Activity;
-import android.content.Context;
-import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.support.v4.content.FileProvider;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.FragmentManager;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.GridView;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.kuelye.components.utils.IOUtils;
+import com.kuelye.components.async.MessageAndErrorCodeProgress;
 import com.kuelye.demo.collagerator.R;
 import com.kuelye.demo.collagerator.instagram.InstagramMedia;
-import com.squareup.picasso.Picasso;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-import static android.graphics.Bitmap.CompressFormat.JPEG;
-import static com.kuelye.demo.collagerator.gui.SendCollageActivity.EXTRA_COLLAGE_FILE_URI;
+import static com.kuelye.demo.collagerator.gui.PhotoSelectionAdapter.checkPhotoSelection;
+import static com.kuelye.demo.collagerator.gui.PhotoParsingTaskFragment.ERROR_CATCH_EXCEPTION_CODE;
 
-public class PhotoSelectionActivity extends Activity implements View.OnClickListener, AdapterView.OnItemClickListener {
+public class PhotoSelectionActivity extends FragmentActivity
+        implements View.OnClickListener, AdapterView.OnItemClickListener,
+        PhotoParsingTaskFragment.Handler, PhotoSelectionContext {
 
-    public static final String EXTRA_PHOTOS = "EXTRA_PHOTOS";
+    public static final String EXTRA_USER_ID                    = "USER_ID";
+    public static final String EXTRA_MEDIA_COUNT                = "MEDIA_COUNT";
 
-    private static final String TAG = "com.demo.collagerator.gui.PhotoSelectionActivity";
+    private static final String TAG_PHOTO_PARSING_TASK_FRAGMENT
+            = "PHOTO_PARSING_TASK_FRAGMENT";
 
-    private static final String     COLLAGE_RELATIVE_FILE_NAME  = "collages/collage.jpg";
-    private static final Bitmap.CompressFormat
-                                    COLLAGE_COMPRESS_FORMAT     = JPEG;
-    private static final int        COLLAGE_QUALITY             = 90;
+    private static final String PAGINATION_NEXT_MAX_ID_MAX      = "";
+    private static final int    PHOTOS_PER_PAGE                 = 16;
+    private static final int    DISPLAYED_PAGES_COUNT_DEFAULT   = 1;
 
-    private static final String     FILE_PROVIDER_AUTHORITY     = "com.kuelye.demo.collagerator";
+    private static final String PROCESSED_TEXT_TEMPLATE         = "%d/%d";
 
-    private static final int        ERROR_EXCEPTION_CODE        = 1;
+    private int                         mUserId;
+    private int                         mMediaCount;
+    private List<InstagramMedia>        mPhotos;
+    private List<InstagramMedia>        mDisplayedPhotos;
+    private int                         mDisplayedPagesCount;
+    private int                         mProcessedCount;
+    private String                      mPaginationNextMaxId;
 
-    private List<InstagramMedia>    mPhotos;
-    private Button                  mPhotoSelectButton;
+    private TextView                    mProcessedTextView;
+    private PhotoSelectionAdapter       mAdapter;
+    private Button                      mPhotoSelectButton;
+    private PhotoParsingTaskFragment    mTaskFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,23 +57,38 @@ public class PhotoSelectionActivity extends Activity implements View.OnClickList
         setContentView(R.layout.photo_selection_activity);
 
         Bundle extras = getIntent().getExtras();
-        mPhotos = extras.getParcelableArrayList(EXTRA_PHOTOS);
+        mUserId = extras.getInt(EXTRA_USER_ID);
+        mMediaCount = extras.getInt(EXTRA_MEDIA_COUNT);
+        mPhotos = new ArrayList<InstagramMedia>();
+        mDisplayedPagesCount = DISPLAYED_PAGES_COUNT_DEFAULT;
+        updateDisplayedPhotos(true);
 
+        mProcessedTextView = (TextView) findViewById(R.id.processed_text_view);
+        setProcessedText();
         final GridView gridView = (GridView) findViewById(R.id.photos_grid_view);
-        final InstagramMediaAdapter adapter = new InstagramMediaAdapter(
-                this, R.layout.photo_selection_row, mPhotos);
-        gridView.setAdapter(adapter);
+        mAdapter = new PhotoSelectionAdapter(this, this, R.layout.photo_selection_row, mDisplayedPhotos);
+        gridView.setAdapter(mAdapter);
         gridView.setOnItemClickListener(this);
-
         mPhotoSelectButton = (Button) findViewById(R.id.photo_select_button);
         mPhotoSelectButton.setOnClickListener(this);
+
+        final FragmentManager fragmentManager = getSupportFragmentManager();
+        mTaskFragment = (PhotoParsingTaskFragment) fragmentManager
+                .findFragmentByTag(TAG_PHOTO_PARSING_TASK_FRAGMENT);
+        if (mTaskFragment == null) {
+            mTaskFragment = new PhotoParsingTaskFragment();
+            fragmentManager.beginTransaction()
+                    .add(mTaskFragment, TAG_PHOTO_PARSING_TASK_FRAGMENT).commit();
+        }
+        mPaginationNextMaxId = PAGINATION_NEXT_MAX_ID_MAX;
+        mTaskFragment.startTask(mUserId, mPaginationNextMaxId);
     }
 
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.photo_select_button: {
-                new MergePhotosTask(this).execute(mPhotos);
+                //new MergePhotosTask(this).execute(mPhotos);
                 break;
             }
         }
@@ -92,172 +102,80 @@ public class PhotoSelectionActivity extends Activity implements View.OnClickList
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-
-        mPhotoSelectButton.setEnabled(true);
+    public void onPreExecute() {
+        // stub
     }
 
-    // ------------------- PRIVATE -------------------
-
-    private void checkPhotoSelection(View photoView, InstagramMedia photo) {
-        ViewHolder rowViewHolder = (ViewHolder) photoView.getTag();
-
-        if (photo.isSelected()) {
-            rowViewHolder.photoLayout.setBackgroundResource(R.color.photo_layout_selected);
-        } else {
-            rowViewHolder.photoLayout.setBackgroundResource(R.color.photo_layout_unselected);
-        }
-    }
-
-    // -------------------- INNER --------------------
-
-    private class InstagramMediaAdapter extends ArrayAdapter<InstagramMedia> {
-
-        private final Activity              mContext;
-        private final int                   mRowResource;
-        private final List<InstagramMedia>  mObjects;
-
-        public InstagramMediaAdapter(Activity context, int rowResource, List<InstagramMedia> objects) {
-            super(context, rowResource, objects);
-
-            mContext = context;
-            mRowResource = rowResource;
-            mObjects = objects;
-        }
-
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            View imageView = convertView;
-            ViewHolder rowViewHolder;
-            final InstagramMedia photo = mObjects.get(position);
-
-            if (imageView == null) {
-                final LayoutInflater inflater = mContext.getLayoutInflater();
-                imageView = inflater.inflate(mRowResource, parent, false);
-
-                rowViewHolder = new ViewHolder();
-                rowViewHolder.photoImageView
-                        = (ImageView) imageView.findViewById(R.id.photo_image_view);
-                rowViewHolder.likesCountTextView
-                        = (TextView) imageView.findViewById(R.id.likes_count_text_view);
-                rowViewHolder.photoLayout
-                        = (LinearLayout) imageView.findViewById(R.id.photo_layout);
-
-                imageView.setTag(rowViewHolder);
-            } else {
-                rowViewHolder = (ViewHolder) imageView.getTag();
-            }
-            checkPhotoSelection(imageView, photo);
-
-            rowViewHolder.likesCountTextView.setText(Integer.toString(photo.getLikesCount()));
-            Picasso.with(mContext)
-                    .load(photo.getThumbnailImageUrl())
-                    .into(rowViewHolder.photoImageView);
-
-            return imageView;
-        }
-
-    }
-
-    private class ViewHolder {
-
-        public LinearLayout photoLayout;
-        public ImageView    photoImageView;
-        public TextView     likesCountTextView;
-
-    }
-
-    private class MergePhotosTask extends AsyncTask<List<InstagramMedia>, Integer, Uri> {
-
-        private final Context mContext;
-
-        public MergePhotosTask(Context context) {
-            mContext = context;
-        }
-
-        @Override
-        protected void onPreExecute() {
-            mPhotoSelectButton.setEnabled(false);
-        }
-
-        @SuppressWarnings("ResultOfMethodCallIgnored")
-        @Override
-        protected Uri doInBackground(List<InstagramMedia>... params) {
-            final List<InstagramMedia> photos = params[0];
-
-            try {
-                final List<Bitmap> bitmaps = new ArrayList<Bitmap>();
-                for (InstagramMedia photo : photos) {
-                    if (photo.isSelected()) {
-                        bitmaps.add(Picasso.with(mContext)
-                                .load(photo.getStandardResolutionImageUrl())
-                                .get()
-                        );
-                    }
-                }
-
-                final int size = bitmaps.get(0).getWidth();
-                final Bitmap collage = Bitmap.createBitmap(size * bitmaps.size()
-                        , size, Bitmap.Config.ARGB_8888);
-                final Canvas canvas = new Canvas(collage);
-                final Paint paint = new Paint();
-
-                for (int i = 0, l = bitmaps.size(); i < l; ++i) {
-                    canvas.drawBitmap(bitmaps.get(i), size * i, 0, paint);
-                }
-
-                final String collageFileName = mContext.getFilesDir() + File.separator + COLLAGE_RELATIVE_FILE_NAME;
-                File collageFile = new File(collageFileName);
-                collageFile.mkdirs();
-                if (collageFile.exists()) {
-                    collageFile.delete();
-                }
-                final OutputStream out = new FileOutputStream(collageFileName);
-                IOUtils.writeBitmapAndCloseSilently(out, collage, COLLAGE_COMPRESS_FORMAT, COLLAGE_QUALITY);
-                collageFile = new File(collageFileName);
-
-                return FileProvider.getUriForFile(mContext, FILE_PROVIDER_AUTHORITY, collageFile);
-            } catch (IOException e) {
-                Log.e(TAG, "", e);
-                publishProgress(ERROR_EXCEPTION_CODE);
-            }
-
-            return null;
-        }
-
-        @Override
-        protected void onProgressUpdate(Integer... progress) {
-            final int code = progress[0];
-
+    @Override
+    public void onProgressUpdate(MessageAndErrorCodeProgress progress) {
+        if (progress.isError()) {
             int toastMessageResId = -1;
-            switch (code) {
-                case ERROR_EXCEPTION_CODE: {
-                    toastMessageResId = R.string.toast_error_exception_text;
+            switch (progress.getErrorCode()) {
+                case ERROR_CATCH_EXCEPTION_CODE: {
+                    toastMessageResId = R.string.toast_error_catch_exception_text;
                     break;
                 }
             }
 
             if (toastMessageResId != -1) {
-                Toast.makeText(mContext, toastMessageResId, Toast.LENGTH_SHORT).show();
-                mPhotoSelectButton.setEnabled(true);
-            }
-        }
-
-        @Override
-        protected void onPostExecute(Uri collageFileUri) {
-            if (collageFileUri != null) {
-                Intent intent = new Intent(PhotoSelectionActivity.this, SendCollageActivity.class);
-                Bundle extras = new Bundle();
-                extras.putParcelable(EXTRA_COLLAGE_FILE_URI, collageFileUri);
-                intent.putExtras(extras);
-                startActivity(intent);
-            } else {
-                mPhotoSelectButton.setEnabled(true);
+                Toast.makeText(this, toastMessageResId, Toast.LENGTH_SHORT).show();
             }
         }
     }
 
+    @Override
+    public void onCancelled() {
+        // stub
+    }
 
+    @Override
+    public void onPostExecute(PhotoParsingTaskFragment.ResultHolder resultHolder) {
+        mPhotos.addAll(resultHolder.nextPhotos);
+        Collections.sort(mPhotos, new InstagramMedia.LikesCountDescendingComparator());
+        updateDisplayedPhotos(true);
+        mProcessedCount += resultHolder.processedCount;
+        mPaginationNextMaxId = resultHolder.nextMaxId;
+
+        setProcessedText();
+
+        if (resultHolder.processedCount != 0) {
+            mTaskFragment.startTask(mUserId, mPaginationNextMaxId);
+        }
+    }
+
+    @Override
+    public void checkPosition(int position) {
+        if (position == mDisplayedPagesCount * PHOTOS_PER_PAGE - 1) {
+            updateDisplayedPhotos(false);
+        }
+    }
+
+    // ------------------- PRIVATE -------------------
+
+    public void setProcessedText() {
+        mProcessedTextView.setText(
+                String.format(PROCESSED_TEXT_TEMPLATE, mProcessedCount, mMediaCount));
+    }
+
+    public void updateDisplayedPhotos(boolean full) {
+        int iMin = 0;
+        final int iMax = Math.min(mDisplayedPagesCount * PHOTOS_PER_PAGE - 1, mPhotos.size());
+
+        if (full) {
+            mDisplayedPhotos = new ArrayList<InstagramMedia>();
+        } else {
+            iMin = mDisplayedPhotos.size();
+        }
+        Log.d("GUB", iMin + "/" + iMax);
+
+        for (int i = iMin; i < iMax; ++i) {
+            mDisplayedPhotos.add(mPhotos.get(i));
+        }
+        if (mAdapter != null) {
+            mAdapter.notifyDataSetChanged();
+        }
+    }
+
+    // -------------------- INNER --------------------
 
 }

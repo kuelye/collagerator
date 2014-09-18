@@ -7,6 +7,22 @@
     android:orientation="vertical"
     tools:context="com.kuelye.demo.collagerator.gui.PhotoSelectionActivity" >
 
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/photo_loaded_text_view_text" />
+
+        <TextView
+            android:id="@id/processed_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
     <GridView
         android:id="@id/photos_grid_view"
         android:columnWidth="@dimen/photo_selection_gallery_column_width"
