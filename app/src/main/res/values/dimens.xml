@@ -6,6 +6,7 @@
     <dimen name="button_min_width_standard">200dp</dimen>
     <!-- photo_selection_activity -->
     <dimen name="photo_selection_thumbnail_size">100dp</dimen>
+    <dimen name="photo_selection_like_size">15dp</dimen>
     <dimen name="photo_selection_thumbnail_spacing">5dp</dimen>
     <dimen name="photo_selection_gallery_column_width">110dp</dimen>
     <dimen name="photo_selection_gallery_spacing">10dp</dimen>

@@ -1,6 +1,8 @@
 package com.kuelye.demo.collagerator.gui;
 
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Bundle;
@@ -23,7 +25,7 @@ public class SendCollageActivity
         extends RetainedAsyncTaskFragmentActivity<PhotoMergingTaskFragment>
         implements View.OnClickListener, PhotoMergingTaskFragment.Handler {
 
-    public static final String EXTRA_CHOOSEN_PHOTOS     = "EXTRA_CHOOSEN_PHOTOS";
+    public static final String  EXTRA_CHOOSEN_PHOTOS     = "EXTRA_CHOOSEN_PHOTOS";
 
     private static final String STATE_COLLAGE_FILE_URI  = "COLLAGE_FILE_URI";
 
@@ -83,6 +85,14 @@ public class SendCollageActivity
             case R.id.send_collage_button:
                 Intent intent = new Intent(android.content.Intent.ACTION_SEND);
                 intent.setType(EMAIL_INTENT_TYPE);
+
+                List<ResolveInfo> resInfoList = getPackageManager()
+                        .queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
+                for (ResolveInfo resolveInfo : resInfoList) {
+                    String packageName = resolveInfo.activityInfo.packageName;
+                    grantUriPermission(packageName, mCollageFileUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                }
+
                 final Resources resources = getResources();
                 final String subject =  resources.getString(R.string.mail_subject);
                 intent.putExtra(android.content.Intent.EXTRA_SUBJECT, subject);
@@ -92,6 +102,8 @@ public class SendCollageActivity
                 intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 final String intentTitle =  resources.getString(R.string.mail_intent_title);
                 startActivity(Intent.createChooser(intent, intentTitle));
+
+                finish();
         }
     }
 
@@ -140,6 +152,8 @@ public class SendCollageActivity
         Picasso.with(this)
                 .load(mCollageFileUri)
                 .skipMemoryCache()
+                .resize(collageImageView.getWidth(), collageImageView.getHeight())
+                .centerInside()
                 .into(collageImageView);
 
         setUiEnabled(true);
