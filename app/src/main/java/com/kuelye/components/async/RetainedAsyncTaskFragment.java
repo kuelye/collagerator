@@ -19,6 +19,9 @@ public abstract class RetainedAsyncTaskFragment<Param, Progress, Result, Task
 
         //noinspection unchecked
         mHandler = (Handler) activity;
+        if (mTask != null) {
+            mTask.setHandler(mHandler);
+        }
     }
 
     @Override
