@@ -71,6 +71,13 @@ public class SendCollageActivity
     }
 
     @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+
+        setImage();
+    }
+
+    @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
 
@@ -148,13 +155,7 @@ public class SendCollageActivity
         mCollageFileUri = uri;
         mChoosenPhotos = null;
 
-        ImageView collageImageView = (ImageView) findViewById(R.id.collage_image_view);
-        Picasso.with(this)
-                .load(mCollageFileUri)
-                .skipMemoryCache()
-                .resize(collageImageView.getWidth(), collageImageView.getHeight())
-                .centerInside()
-                .into(collageImageView);
+        setImage();
 
         setUiEnabled(true);
     }
@@ -163,6 +164,18 @@ public class SendCollageActivity
 
     private void setUiEnabled(boolean enabled) {
         mSendCollageButton.setEnabled(enabled);
+    }
+
+    private void setImage() {
+        if (mCollageFileUri != null) {
+            ImageView collageImageView = (ImageView) findViewById(R.id.collage_image_view);
+            Picasso.with(this)
+                    .load(mCollageFileUri)
+                    .skipMemoryCache()
+                    .resize(collageImageView.getWidth(), collageImageView.getHeight())
+                    .centerInside()
+                    .into(collageImageView);
+        }
     }
 
 }
