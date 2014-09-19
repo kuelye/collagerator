@@ -86,11 +86,6 @@ public class PhotoMergingTaskFragment extends RetainedAsyncTaskFragment
         }
 
         @Override
-        protected void onPostExecute(Uri result) {
-            super.onPostExecute(result);
-        }
-
-        @Override
         protected Uri doInBackground(List<InstagramMedia>... params) {
             final List<InstagramMedia> choosenPhotos = params[0];
 
